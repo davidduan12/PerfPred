@@ -1,5 +1,12 @@
 from sklearn.impute import KNNImputer
+import sys
+import os
+current_working_directory = os.getcwd()
+print("Current working directory:", current_working_directory)
+# Add the parent directory to the system path
+sys.path.append(os.path.abspath('..'))
 from utils import *
+import matplotlib.pyplot as plt
 
 
 def knn_impute_by_user(matrix, valid_data, k):
@@ -37,7 +44,13 @@ def knn_impute_by_item(matrix, valid_data, k):
     # TODO:                                                             #
     # Implement the function as described in the docstring.             #
     #####################################################################
-    acc = None
+    matrix_t = matrix.T
+    imputer = KNNImputer(n_neighbors=k)
+    imputed_matrix = imputer.fit_transform(matrix_t)
+    imputed_matrix = imputed_matrix.T
+    
+    acc = sparse_matrix_evaluate(valid_data, imputed_matrix)
+    print("Validation Accuracy: {}".format(acc))
     #####################################################################
     #                       END OF YOUR CODE                            #
     #####################################################################
@@ -60,7 +73,48 @@ def main():
     # the best performance and report the test accuracy with the        #
     # chosen k*.                                                        #
     #####################################################################
-    pass
+    k_values = [1, 6, 11, 16, 21, 26]
+    val_accuracies_user_based = []
+    val_accuracies_item_based = []
+    
+    # user-based part
+    for k in k_values:
+        print(f"Running user-based collaborative filtering with k = {k}")
+        val_acc = knn_impute_by_user(sparse_matrix, val_data, k)
+        val_accuracies_user_based.append(val_acc)
+        
+    best_k = k_values[val_accuracies_user_based.index(max(val_accuracies_user_based))]
+    print(f"Best k value: {best_k}")
+    print(f"Validation set accuracy with k = {best_k}: {max(val_accuracies_user_based)}")
+    
+    test_acc = knn_impute_by_user(sparse_matrix, test_data, best_k)
+    print(f"Test accuracy with k = {best_k}: {test_acc}")
+    
+    print("Now start item based part")
+    
+    # item based part
+    for k in k_values:
+        print(f"Running item-based collaborative filtering with k = {k}")
+        val_acc = knn_impute_by_item(sparse_matrix, val_data, k)
+        val_accuracies_item_based.append(val_acc)
+    
+    best_k_item_based = k_values[val_accuracies_item_based.index(max(val_accuracies_item_based))]
+    print(f"Best k value for item-based: {best_k_item_based}")
+    print(f"Validation set accuracy with k = {best_k_item_based}: {max(val_accuracies_item_based)}")
+    
+    test_acc_item_based = knn_impute_by_item(sparse_matrix, test_data, best_k_item_based)
+    print(f"Test accuracy with k = {best_k_item_based} for item-based: {test_acc_item_based}")
+    
+    # plot
+    plt.plot(k_values, val_accuracies_user_based, marker='o', label='User-based')
+    plt.plot(k_values, val_accuracies_item_based, marker='x', label='Item-based')
+    plt.xlabel('k')
+    plt.ylabel('Validation Accuracy')
+    plt.title('Collaborative Filtering: Validation Accuracy vs. k')
+    plt.legend()
+    plt.grid(True)
+    plt.show()
+    
     #####################################################################
     #                       END OF YOUR CODE                            #
     #####################################################################
