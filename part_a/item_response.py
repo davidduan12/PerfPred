@@ -30,10 +30,10 @@ def neg_log_likelihood(data, theta, beta):
         user_id = data["user_id"][i]
         question_id = data["question_id"][i]
         is_correct = data["is_correct"][i]
-        
+
         # Calculate the probability of the correct answer
         prob_correct = sigmoid(theta[user_id] - beta[question_id])
-        
+
         # Update the log likelihood for the correct and incorrect answers
         if is_correct:
             log_lklihood += np.log(prob_correct)
@@ -43,6 +43,25 @@ def neg_log_likelihood(data, theta, beta):
     #                       END OF YOUR CODE                            #
     #####################################################################
     return -log_lklihood
+
+
+def gradient_theta_beta(data, theta, beta):
+    """ Compute the gradients for theta and beta according to the given formula. """
+    grad_theta = np.zeros_like(theta)
+    grad_beta = np.zeros_like(beta)
+
+    for i in range(len(data["is_correct"])):
+        user_id = data["user_id"][i]
+        question_id = data["question_id"][i]
+        is_correct = data["is_correct"][i]
+
+        z = theta[user_id] - beta[question_id]
+        prob_correct = sigmoid(z)
+
+        grad_theta[user_id] += is_correct - prob_correct
+        grad_beta[question_id] += prob_correct - is_correct
+
+    return grad_theta, grad_beta
 
 
 def update_theta_beta(data, lr, theta, beta):
@@ -66,7 +85,10 @@ def update_theta_beta(data, lr, theta, beta):
     # TODO:                                                             #
     # Implement the function as described in the docstring.             #
     #####################################################################
-    pass
+    grad_theta, grad_beta = gradient_theta_beta(data, theta, beta)
+    theta += lr * grad_theta
+    beta += lr * grad_beta
+
     #####################################################################
     #                       END OF YOUR CODE                            #
     #####################################################################
@@ -87,8 +109,8 @@ def irt(data, val_data, lr, iterations):
     :return: (theta, beta, val_acc_lst)
     """
     # TODO: Initialize theta and beta.
-    theta = None
-    beta = None
+    theta = np.zeros(len(set(data['user_id'])))
+    beta = np.zeros(len(set(data['question_id'])))
 
     val_acc_lst = []
 
@@ -96,7 +118,7 @@ def irt(data, val_data, lr, iterations):
         neg_lld = neg_log_likelihood(data, theta=theta, beta=beta)
         score = evaluate(data=val_data, theta=theta, beta=beta)
         val_acc_lst.append(score)
-        print("NLLK: {} \t Score: {}".format(neg_lld, score))
+        # print("NLLK: {} \t Score: {}".format(neg_lld, score))
         theta, beta = update_theta_beta(data, lr, theta, beta)
 
     # TODO: You may change the return values to achieve what you want.
@@ -134,7 +156,40 @@ def main():
     # Tune learning rate and number of iterations. With the implemented #
     # code, report the validation and test accuracy.                    #
     #####################################################################
-    pass
+    # learning_rates = np.arange(0.0001, 0.11, 0.01)
+    # iteration_counts = np.arange(100, 1000, 100)
+    learning_rates = [0.00001]
+    iteration_counts = [200, 500]
+
+    # num_users = len(set(train_data['user_id']))
+    # num_questions = len(set(train_data['question_id']))
+    # # theta = np.zeros(num_users)
+    # # beta = np.zeros(num_questions)
+
+    tuning_results = {}
+
+    for lr in learning_rates:
+        for iterations in iteration_counts:
+            theta_tuned, beta_tuned, val_acc_lst = irt(train_data, val_data, lr, iterations)
+            val_acc = evaluate(val_data, theta_tuned, beta_tuned)
+            tuning_results[(lr, iterations)] = val_acc
+            print(f"LR: {lr}, Iterations: {iterations}, Validation Accuracy: {val_acc}")
+
+        # Find the best hyperparameters
+    best_params = max(tuning_results, key=tuning_results.get)
+    best_lr, best_iterations = best_params
+    print(f"Best LR: {best_lr}, Best Iterations: {best_iterations}")
+
+    theta_final, beta_final, _ = irt(train_data, val_data, best_lr, best_iterations)
+    test_acc = evaluate(test_data, theta_final, beta_final)
+    print(f"Final Test Accuracy: {test_acc}")
+
+    # lr = 0.01
+    # iterations = 1000
+    #
+    # theta, beta, val_acc_lst = irt(train_data, val_data, lr, iterations)
+    # test_acc = evaluate(test_data, theta, beta)
+
     #####################################################################
     #                       END OF YOUR CODE                            #
     #####################################################################
