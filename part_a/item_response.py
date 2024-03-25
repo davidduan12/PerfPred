@@ -1,4 +1,5 @@
 from utils import *
+import matplotlib.pyplot as plt
 
 import numpy as np
 
@@ -112,17 +113,20 @@ def irt(data, val_data, lr, iterations):
     theta = np.zeros(len(set(data['user_id'])))
     beta = np.zeros(len(set(data['question_id'])))
 
+    valid_lst = []
     val_acc_lst = []
 
     for i in range(iterations):
         neg_lld = neg_log_likelihood(data, theta=theta, beta=beta)
+        valid_lst.append(neg_lld)
+
         score = evaluate(data=val_data, theta=theta, beta=beta)
         val_acc_lst.append(score)
         # print("NLLK: {} \t Score: {}".format(neg_lld, score))
         theta, beta = update_theta_beta(data, lr, theta, beta)
 
     # TODO: You may change the return values to achieve what you want.
-    return theta, beta, val_acc_lst
+    return theta, beta, val_acc_lst, valid_lst
 
 
 def evaluate(data, theta, beta):
@@ -141,7 +145,41 @@ def evaluate(data, theta, beta):
         p_a = sigmoid(x)
         pred.append(p_a >= 0.5)
     return np.sum((data["is_correct"] == np.array(pred))) \
-           / len(data["is_correct"])
+        / len(data["is_correct"])
+
+
+def plot_log_likelihoods(train_ll):
+    """
+    Plot the log likelihoods of training data.
+    """
+    plt.figure(figsize=(10, 6))
+    plt.plot(train_ll, label='Training Log-likelihood')
+    plt.xlabel('Iterations')
+    plt.ylabel('Log-likelihood')
+    plt.title('Training and Validation Log-likelihoods')
+    plt.legend()
+    plt.grid(True)
+    plt.show()
+
+
+def plot_probability_curves(theta, beta, questions):
+    """
+    Plot the 3 probability curves.
+    """
+    theta_range = np.linspace(-3, 3, 100)
+    plt.figure(figsize=(10, 6))
+
+    for q in questions:
+        beta_q = beta[q]
+        p_correct = 1 / (1 + np.exp(-(theta_range - beta_q)))
+        plt.plot(theta_range, p_correct, label=f'Question {q + 1}')
+
+    plt.xlabel('Ability ($\\theta$)')
+    plt.ylabel('Probability of Correct Response')
+    plt.title('Probability of Correct Response vs. Ability')
+    plt.legend()
+    plt.grid(True)
+    plt.show()
 
 
 def main():
@@ -158,8 +196,8 @@ def main():
     #####################################################################
     # learning_rates = np.arange(0.0001, 0.11, 0.01)
     # iteration_counts = np.arange(100, 1000, 100)
-    learning_rates = [0.00001]
-    iteration_counts = [200, 500]
+    learning_rates = [0.001]
+    iteration_counts = [100]
 
     # num_users = len(set(train_data['user_id']))
     # num_questions = len(set(train_data['question_id']))
@@ -167,10 +205,12 @@ def main():
     # # beta = np.zeros(num_questions)
 
     tuning_results = {}
+    val_acc_lst = None
+    val_lst = None
 
     for lr in learning_rates:
         for iterations in iteration_counts:
-            theta_tuned, beta_tuned, val_acc_lst = irt(train_data, val_data, lr, iterations)
+            theta_tuned, beta_tuned, val_acc_lst, val_lst = irt(train_data, val_data, lr, iterations)
             val_acc = evaluate(val_data, theta_tuned, beta_tuned)
             tuning_results[(lr, iterations)] = val_acc
             print(f"LR: {lr}, Iterations: {iterations}, Validation Accuracy: {val_acc}")
@@ -180,25 +220,23 @@ def main():
     best_lr, best_iterations = best_params
     print(f"Best LR: {best_lr}, Best Iterations: {best_iterations}")
 
-    theta_final, beta_final, _ = irt(train_data, val_data, best_lr, best_iterations)
+    theta_final, beta_final, _, _ = irt(train_data, val_data, best_lr, best_iterations)
     test_acc = evaluate(test_data, theta_final, beta_final)
     print(f"Final Test Accuracy: {test_acc}")
-
-    # lr = 0.01
-    # iterations = 1000
-    #
-    # theta, beta, val_acc_lst = irt(train_data, val_data, lr, iterations)
-    # test_acc = evaluate(test_data, theta, beta)
 
     #####################################################################
     #                       END OF YOUR CODE                            #
     #####################################################################
+    # part (c)
+    plot_log_likelihoods(val_lst)
 
     #####################################################################
     # TODO:                                                             #
     # Implement part (d)                                                #
     #####################################################################
-    pass
+    questions_to_plot = [0, 1, 2]
+    plot_probability_curves(theta_final, beta_final, questions_to_plot)
+
     #####################################################################
     #                       END OF YOUR CODE                            #
     #####################################################################
