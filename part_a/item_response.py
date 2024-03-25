@@ -25,6 +25,20 @@ def neg_log_likelihood(data, theta, beta):
     # Implement the function as described in the docstring.             #
     #####################################################################
     log_lklihood = 0.
+    # Loop over all data points
+    for i in range(len(data["is_correct"])):
+        user_id = data["user_id"][i]
+        question_id = data["question_id"][i]
+        is_correct = data["is_correct"][i]
+        
+        # Calculate the probability of the correct answer
+        prob_correct = sigmoid(theta[user_id] - beta[question_id])
+        
+        # Update the log likelihood for the correct and incorrect answers
+        if is_correct:
+            log_lklihood += np.log(prob_correct)
+        else:
+            log_lklihood += np.log(1 - prob_correct)
     #####################################################################
     #                       END OF YOUR CODE                            #
     #####################################################################
