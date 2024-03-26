@@ -70,11 +70,13 @@ class AutoEncoder(nn.Module):
         # Implement the function as described in the docstring.             #
         # Use sigmoid activations for f and g.                              #
         #####################################################################
+        # print(inputs.shape)
         out = inputs.clone()
         out = self.g(out)
         out = F.relu(out)
         out = self.h(out)
         out = F.relu(out)
+        # print(out.shape)
         #####################################################################
         #                       END OF YOUR CODE                            #
         #####################################################################
@@ -114,9 +116,8 @@ def train(model, lr, lamb, train_data, zero_train_data, valid_data, num_epoch):
             output = model(inputs)
 
             # Mask the target to only compute the gradient of valid entries.
-            # nan_mask = np.isnan(train_data[user_id].unsqueeze(0).numpy())
-            nan_mask = np.isnan(train_data[user_id].numpy())
-            target[0][nan_mask] = output[0][nan_mask]
+            nan_mask = np.isnan(train_data[user_id].unsqueeze(0).numpy())
+            target[0:1][nan_mask] = output[0:1][nan_mask]
 
             loss = torch.sum((output - target) ** 2.)
             # loss = loss + lamb * model.get_weight_norm()**2.
@@ -173,7 +174,7 @@ def main():
 
     # Set optimization hyperparameters.
     lr = 0.0005
-    num_epoch = 1000
+    num_epoch = 100
     lamb = 114514
 
     train(model, lr, lamb, train_matrix, zero_train_matrix,
