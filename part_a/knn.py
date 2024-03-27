@@ -7,6 +7,9 @@ print("Current working directory:", current_working_directory)
 sys.path.append(os.path.abspath('..'))
 from utils import *
 import matplotlib.pyplot as plt
+from sklearn.metrics import f1_score
+from sklearn.metrics import matthews_corrcoef, average_precision_score
+
 
 
 def knn_impute_by_user(matrix, valid_data, k):
@@ -56,6 +59,80 @@ def knn_impute_by_item(matrix, valid_data, k):
     #####################################################################
     return acc
 
+def predicted_and_actual(data, matrix, threshold=0.5):
+    predictions = []
+    actuals = []
+    for i in range(len(data["is_correct"])):
+        cur_user_id = data["user_id"][i]
+        cur_question_id = data["question_id"][i]
+        prediction = 1 if matrix[cur_user_id, cur_question_id] >= threshold else 0
+        actual = data["is_correct"][i]
+
+        predictions.append(prediction)
+        actuals.append(actual)
+
+    return predictions, actuals
+
+
+def knn_impute_by_user_test(matrix, test_data, k):
+    """ Fill in the missing values using k-Nearest Neighbors based on
+    student similarity. Return the accuracy on valid_data and the f1 score.
+
+    :param matrix: 2D sparse matrix
+    :param test_data: A dictionary {user_id: list, question_id: list,
+    is_correct: list}
+    :param k: int
+    :return: float
+    """
+    nbrs = KNNImputer(n_neighbors=k)
+    # We use NaN-Euclidean distance measure.
+    mat = nbrs.fit_transform(matrix)
+    acc = sparse_matrix_evaluate(test_data, mat)
+    
+    predictions, actuals = predicted_and_actual(test_data, mat)
+
+    f1 = f1_score(actuals, predictions)
+    user_mcc = matthews_corrcoef(actuals, predictions)
+    user_auc_pr = average_precision_score(actuals, predictions)
+    
+    print("user-based Test Accuracy: {}".format(acc))
+    print("user-based F1 Score: {}".format(f1))
+    print("user-based MCC: {}".format(user_mcc))
+    print("user-based AUC-PR: {}".format(user_auc_pr))
+    return acc, f1
+
+def knn_impute_by_item_test(matrix, test_data, k):
+    """ Fill in the missing values using k-Nearest Neighbors based on
+    question similarity. Return the accuracy on test_data and the f1 score.
+
+    :param matrix: 2D sparse matrix
+    :param test_data: A dictionary {user_id: list, question_id: list,
+    is_correct: list}
+    :param k: int
+    :return: float
+    """
+    #####################################################################
+    # TODO:                                                             #
+    # Implement the function as described in the docstring.             #
+    #####################################################################
+    matrix_t = matrix.T
+    imputer = KNNImputer(n_neighbors=k)
+    imputed_matrix = imputer.fit_transform(matrix_t)
+    imputed_matrix = imputed_matrix.T
+    
+    acc = sparse_matrix_evaluate(test_data, imputed_matrix)
+    
+    predictions, actuals = predicted_and_actual(test_data, imputed_matrix)
+
+    f1 = f1_score(actuals, predictions)
+    item_mcc = matthews_corrcoef(actuals, predictions)
+    item_auc_pr = average_precision_score(actuals, predictions)
+    
+    print("item-based Test Accuracy: {}".format(acc))
+    print("item-based F1 Score: {}".format(f1))
+    print("item-based MCC: {}".format(item_mcc))
+    print("item-based AUC-PR: {}".format(item_auc_pr))
+    return acc, f1
 
 def main():
     sparse_matrix = load_train_sparse("../data").toarray()
@@ -87,8 +164,8 @@ def main():
     print(f"Best k value: {best_k}")
     print(f"Validation set accuracy with k = {best_k}: {max(val_accuracies_user_based)}")
     
-    test_acc = knn_impute_by_user(sparse_matrix, test_data, best_k)
-    print(f"Test accuracy with k = {best_k}: {test_acc}")
+    test_acc = knn_impute_by_user_test(sparse_matrix, test_data, best_k)
+    print(f"Test accuracy with k = {best_k}: {test_acc[0]} and F1 score: {test_acc[1]}")
     
     print("Now start item based part")
     
@@ -102,8 +179,8 @@ def main():
     print(f"Best k value for item-based: {best_k_item_based}")
     print(f"Validation set accuracy with k = {best_k_item_based}: {max(val_accuracies_item_based)}")
     
-    test_acc_item_based = knn_impute_by_item(sparse_matrix, test_data, best_k_item_based)
-    print(f"Test accuracy with k = {best_k_item_based} for item-based: {test_acc_item_based}")
+    test_acc_item_based = knn_impute_by_item_test(sparse_matrix, test_data, best_k_item_based)
+    print(f"Test accuracy with k = {best_k_item_based} for item-based: {test_acc_item_based[0]} and F1 score: {test_acc_item_based[1]}")
     
     # plot
     plt.plot(k_values, val_accuracies_user_based, marker='o', label='User-based')
