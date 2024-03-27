@@ -73,9 +73,9 @@ class AutoEncoder(nn.Module):
         # print(inputs.shape)
         out = inputs.clone()
         out = self.g(out)
-        out = F.relu(out)
+        out = F.sigmoid(out)
         out = self.h(out)
-        out = F.relu(out)
+        out = F.sigmoid(out)
         # print(out.shape)
         #####################################################################
         #                       END OF YOUR CODE                            #
@@ -120,7 +120,7 @@ def train(model, lr, lamb, train_data, zero_train_data, valid_data, num_epoch):
             target[0:1][nan_mask] = output[0:1][nan_mask]
 
             loss = torch.sum((output - target) ** 2.)
-            # loss = loss + lamb * model.get_weight_norm()**2.
+            loss = loss + lamb * model.get_weight_norm()
             loss.backward()
 
             train_loss += loss.item()
@@ -173,9 +173,9 @@ def main():
     model = AutoEncoder(num_question=zero_train_matrix.shape[1], k=k)
 
     # Set optimization hyperparameters.
-    lr = 0.0005
+    lr = 0.01
     num_epoch = 100
-    lamb = 114514
+    lamb = 0
 
     train(model, lr, lamb, train_matrix, zero_train_matrix,
           valid_data, num_epoch)
