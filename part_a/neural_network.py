@@ -96,8 +96,8 @@ def train(model, lr, lamb, train_data, zero_train_data, valid_data, num_epoch):
     :param num_epoch: int
     :return: None
     """
-    # TODO: Add a regularizer to the cost function. 
-    
+    # TODO: Add a regularizer to the cost function.
+
     # Tell PyTorch you are training the model.
     model.train()
 
@@ -120,7 +120,7 @@ def train(model, lr, lamb, train_data, zero_train_data, valid_data, num_epoch):
             target[0:1][nan_mask] = output[0:1][nan_mask]
 
             loss = torch.sum((output - target) ** 2.)
-            loss = loss + lamb * model.get_weight_norm()
+            loss = loss + lamb / 2 * model.get_weight_norm()
             loss.backward()
 
             train_loss += loss.item()
@@ -168,15 +168,15 @@ def main():
     # Try out 5 different k and select the best k using the             #
     # validation set.                                                   #
     #####################################################################
-    # Set model hyperparameters.
-    k = 50  # 10 50 100 200 500
+    print("\nbest parameter with regularization: k=100, lr=0.015, num_epoch=50, lamb=0.015")
+    k = 100  # 10 50 100 200 500
     model = AutoEncoder(num_question=zero_train_matrix.shape[1], k=k)
 
     # Set optimization hyperparameters.
     lr = 0.01
     num_epoch = 100
-    lamb = 0
-
+    lamb = 0.02
+    print(f"\nbest parameter with regularization: k={k}, lr={lr}, num_epoch={num_epoch}, lamb={lamb}")
     train(model, lr, lamb, train_matrix, zero_train_matrix,
           valid_data, num_epoch)
     #####################################################################
