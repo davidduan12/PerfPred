@@ -8,6 +8,7 @@ import torch.utils.data
 
 import numpy as np
 import torch
+import matplotlib.pyplot as plt
 
 
 def load_data(base_path="../data"):
@@ -104,7 +105,8 @@ def train(model, lr, lamb, train_data, zero_train_data, valid_data, num_epoch):
     # Define optimizers and loss function.
     optimizer = optim.SGD(model.parameters(), lr=lr)
     num_student = train_data.shape[0]
-
+    train_losses = []
+    valid_accs = []
     for epoch in range(0, num_epoch):
         train_loss = 0.
 
@@ -117,7 +119,7 @@ def train(model, lr, lamb, train_data, zero_train_data, valid_data, num_epoch):
 
             # Mask the target to only compute the gradient of valid entries.
             nan_mask = np.isnan(train_data[user_id].unsqueeze(0).numpy())
-            target[0:1][nan_mask] = output[0:1][nan_mask]
+            target[0][nan_mask] = output[0][nan_mask]
 
             loss = torch.sum((output - target) ** 2.)
             loss = loss + lamb / 2 * model.get_weight_norm()
@@ -129,6 +131,16 @@ def train(model, lr, lamb, train_data, zero_train_data, valid_data, num_epoch):
         valid_acc = evaluate(model, zero_train_data, valid_data)
         print("Epoch: {} \tTraining Cost: {:.6f}\t "
               "Valid Acc: {}".format(epoch, train_loss, valid_acc))
+        train_losses.append(train_loss)
+        valid_accs.append(valid_acc)
+    x = list(range(num_epoch))
+    fig, ax = plt.subplots(1, 2, figsize=(12, 5))
+    ax[0].plot(x, train_losses)
+    ax[0].set_title("Training Loss")
+    ax[1].plot(x, valid_accs)
+    ax[1].set_title("Validation")
+    plt.tight_layout()
+    plt.show()
     #####################################################################
     #                       END OF YOUR CODE                            #
     #####################################################################
@@ -168,17 +180,27 @@ def main():
     # Try out 5 different k and select the best k using the             #
     # validation set.                                                   #
     #####################################################################
-    print("\nbest parameter with regularization: k=100, lr=0.015, num_epoch=50, lamb=0.015")
-    k = 100  # 10 50 100 200 500
+    k = 10
+    lr = 0.01
+    num_epoch = 120
+    lamb = 0
+    model = AutoEncoder(num_question=zero_train_matrix.shape[1], k=k)
+    print(f"\nbest parameter without regularization: k={k}, lr={lr}, num_epoch={num_epoch}")
+    train(model, lr, lamb, train_matrix, zero_train_matrix,
+          valid_data, num_epoch)
+    print("test accuracy: ", evaluate(model, zero_train_matrix, test_data))
+
+    k = 10  # 10 50 100 200 500
     model = AutoEncoder(num_question=zero_train_matrix.shape[1], k=k)
 
     # Set optimization hyperparameters.
     lr = 0.01
-    num_epoch = 100
-    lamb = 0.02
+    num_epoch = 120
+    lamb = 0.001
     print(f"\nbest parameter with regularization: k={k}, lr={lr}, num_epoch={num_epoch}, lamb={lamb}")
     train(model, lr, lamb, train_matrix, zero_train_matrix,
           valid_data, num_epoch)
+    print("test accuracy: ", evaluate(model, zero_train_matrix, test_data))
     #####################################################################
     #                       END OF YOUR CODE                            #
     #####################################################################
