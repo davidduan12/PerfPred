@@ -7,6 +7,7 @@ print("Current working directory:", current_working_directory)
 sys.path.append(os.path.abspath('..'))
 from utils import *
 import matplotlib.pyplot as plt
+import time
 
 
 def knn_impute_by_user(matrix, valid_data, k):
@@ -80,7 +81,10 @@ def main():
     # user-based part
     for k in k_values:
         print(f"Running user-based collaborative filtering with k = {k}")
+        a = time.time()
         val_acc = knn_impute_by_user(sparse_matrix, val_data, k)
+        b = time.time()
+        print("Running time: {}".format(b - a))
         val_accuracies_user_based.append(val_acc)
         
     best_k = k_values[val_accuracies_user_based.index(max(val_accuracies_user_based))]
@@ -95,8 +99,11 @@ def main():
     # item based part
     for k in k_values:
         print(f"Running item-based collaborative filtering with k = {k}")
+        a = time.time()
         val_acc = knn_impute_by_item(sparse_matrix, val_data, k)
+        b = time.time()
         val_accuracies_item_based.append(val_acc)
+        print("running time: ", b-a)
     
     best_k_item_based = k_values[val_accuracies_item_based.index(max(val_accuracies_item_based))]
     print(f"Best k value for item-based: {best_k_item_based}")
