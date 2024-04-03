@@ -9,7 +9,7 @@ from utils import *
 import matplotlib.pyplot as plt
 from sklearn.metrics import f1_score
 from sklearn.metrics import matthews_corrcoef, average_precision_score
-
+import time
 
 
 def knn_impute_by_user(matrix, valid_data, k):
@@ -88,13 +88,13 @@ def knn_impute_by_user_test(matrix, test_data, k):
     # We use NaN-Euclidean distance measure.
     mat = nbrs.fit_transform(matrix)
     acc = sparse_matrix_evaluate(test_data, mat)
-    
+
     predictions, actuals = predicted_and_actual(test_data, mat)
 
     f1 = f1_score(actuals, predictions)
     user_mcc = matthews_corrcoef(actuals, predictions)
     user_auc_pr = average_precision_score(actuals, predictions)
-    
+
     print("user-based Test Accuracy: {}".format(acc))
     print("user-based F1 Score: {}".format(f1))
     print("user-based MCC: {}".format(user_mcc))
@@ -119,15 +119,15 @@ def knn_impute_by_item_test(matrix, test_data, k):
     imputer = KNNImputer(n_neighbors=k)
     imputed_matrix = imputer.fit_transform(matrix_t)
     imputed_matrix = imputed_matrix.T
-    
+
     acc = sparse_matrix_evaluate(test_data, imputed_matrix)
-    
+
     predictions, actuals = predicted_and_actual(test_data, imputed_matrix)
 
     f1 = f1_score(actuals, predictions)
     item_mcc = matthews_corrcoef(actuals, predictions)
     item_auc_pr = average_precision_score(actuals, predictions)
-    
+
     print("item-based Test Accuracy: {}".format(acc))
     print("item-based F1 Score: {}".format(f1))
     print("item-based MCC: {}".format(item_mcc))
@@ -157,7 +157,10 @@ def main():
     # user-based part
     for k in k_values:
         print(f"Running user-based collaborative filtering with k = {k}")
+        a = time.time()
         val_acc = knn_impute_by_user(sparse_matrix, val_data, k)
+        b = time.time()
+        print("Running time: {}".format(b - a))
         val_accuracies_user_based.append(val_acc)
         
     best_k = k_values[val_accuracies_user_based.index(max(val_accuracies_user_based))]
@@ -172,9 +175,12 @@ def main():
     # item based part
     for k in k_values:
         print(f"Running item-based collaborative filtering with k = {k}")
+        a = time.time()
         val_acc = knn_impute_by_item(sparse_matrix, val_data, k)
+        b = time.time()
         val_accuracies_item_based.append(val_acc)
-    
+        print("running time: ", b-a)
+
     best_k_item_based = k_values[val_accuracies_item_based.index(max(val_accuracies_item_based))]
     print(f"Best k value for item-based: {best_k_item_based}")
     print(f"Validation set accuracy with k = {best_k_item_based}: {max(val_accuracies_item_based)}")
