@@ -194,10 +194,10 @@ def main():
     # Tune learning rate and number of iterations. With the implemented #
     # code, report the validation and test accuracy.                    #
     #####################################################################
-    # learning_rates = np.arange(0.0001, 0.11, 0.01)
-    # iteration_counts = np.arange(100, 1000, 100)
-    learning_rates = [0.001]
-    iteration_counts = [100]
+    # learning_rates = np.arange(0.0005, 0.11, 0.0)
+    iteration_counts = np.arange(100, 1001, 200)
+    learning_rates = [0.0005, 0.001]
+    # iteration_counts = [100]
 
     # num_users = len(set(train_data['user_id']))
     # num_questions = len(set(train_data['question_id']))
@@ -208,12 +208,15 @@ def main():
     val_acc_lst = None
     val_lst = None
 
+
     for lr in learning_rates:
         for iterations in iteration_counts:
             theta_tuned, beta_tuned, val_acc_lst, val_lst = irt(train_data, val_data, lr, iterations)
             val_acc = evaluate(val_data, theta_tuned, beta_tuned)
+            train_acc = evaluate(train_data, theta_tuned, beta_tuned)
             tuning_results[(lr, iterations)] = val_acc
-            print(f"LR: {lr}, Iterations: {iterations}, Validation Accuracy: {val_acc}")
+
+            print(f"LR: {lr}, Iterations: {iterations}, Validation Accuracy: {val_acc}, Training Accuracy: {train_acc}")
 
         # Find the best hyperparameters
     best_params = max(tuning_results, key=tuning_results.get)
