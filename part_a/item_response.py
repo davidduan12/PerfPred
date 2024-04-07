@@ -114,11 +114,14 @@ def irt(data, val_data, lr, iterations):
     beta = np.zeros(len(set(data['question_id'])))
 
     valid_lst = []
+    train_lst = []
     val_acc_lst = []
 
     for i in range(iterations):
         neg_lld = neg_log_likelihood(data, theta=theta, beta=beta)
-        valid_lst.append(neg_lld)
+        train_lst.append(neg_lld)
+        neg_lld_valid = neg_log_likelihood(val_data, theta=theta, beta=beta)
+        valid_lst.append(neg_lld_valid)
 
         score = evaluate(data=val_data, theta=theta, beta=beta)
         val_acc_lst.append(score)
@@ -126,7 +129,7 @@ def irt(data, val_data, lr, iterations):
         theta, beta = update_theta_beta(data, lr, theta, beta)
 
     # TODO: You may change the return values to achieve what you want.
-    return theta, beta, val_acc_lst, valid_lst
+    return theta, beta, val_acc_lst, valid_lst, train_lst
 
 
 def evaluate(data, theta, beta):
@@ -148,15 +151,16 @@ def evaluate(data, theta, beta):
         / len(data["is_correct"])
 
 
-def plot_log_likelihoods(train_ll):
+def plot_log_likelihoods(train_ll, val_ll):
     """
-    Plot the log likelihoods of training data.
+    Plot the log likelihoods of training and validation data.
     """
     plt.figure(figsize=(10, 6))
     plt.plot(train_ll, label='Training Log-likelihood')
+    plt.plot(val_ll, label='Validation Log-likelihood')
     plt.xlabel('Iterations')
-    plt.ylabel('Log-likelihood')
-    plt.title('Training and Validation Log-likelihoods')
+    plt.ylabel('Negative Log-likelihood')
+    plt.title('Training and Validation Negative Log-likelihoods')
     plt.legend()
     plt.grid(True)
     plt.show()
@@ -194,24 +198,18 @@ def main():
     # Tune learning rate and number of iterations. With the implemented #
     # code, report the validation and test accuracy.                    #
     #####################################################################
-    # learning_rates = np.arange(0.0005, 0.11, 0.0)
     iteration_counts = np.arange(100, 1001, 200)
     learning_rates = [0.0005, 0.001]
-    # iteration_counts = [100]
-
-    # num_users = len(set(train_data['user_id']))
-    # num_questions = len(set(train_data['question_id']))
-    # # theta = np.zeros(num_users)
-    # # beta = np.zeros(num_questions)
 
     tuning_results = {}
     val_acc_lst = None
+    train_lst = None
     val_lst = None
 
 
     for lr in learning_rates:
         for iterations in iteration_counts:
-            theta_tuned, beta_tuned, val_acc_lst, val_lst = irt(train_data, val_data, lr, iterations)
+            theta_tuned, beta_tuned, val_acc_lst, val_lst, train_lst = irt(train_data, val_data, lr, iterations)
             val_acc = evaluate(val_data, theta_tuned, beta_tuned)
             train_acc = evaluate(train_data, theta_tuned, beta_tuned)
             tuning_results[(lr, iterations)] = val_acc
@@ -223,7 +221,7 @@ def main():
     best_lr, best_iterations = best_params
     print(f"Best LR: {best_lr}, Best Iterations: {best_iterations}")
 
-    theta_final, beta_final, _, _ = irt(train_data, val_data, best_lr, best_iterations)
+    theta_final, beta_final, _, _, _ = irt(train_data, val_data, best_lr, best_iterations)
     test_acc = evaluate(test_data, theta_final, beta_final)
     print(f"Final Test Accuracy: {test_acc}")
 
@@ -231,7 +229,7 @@ def main():
     #                       END OF YOUR CODE                            #
     #####################################################################
     # part (c)
-    plot_log_likelihoods(val_lst)
+    plot_log_likelihoods(train_lst, val_lst)
 
     #####################################################################
     # TODO:                                                             #
