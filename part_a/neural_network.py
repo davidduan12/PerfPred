@@ -105,7 +105,7 @@ def train(model, lr, lamb, train_data, zero_train_data, valid_data, num_epoch):
     # Define optimizers and loss function.
     optimizer = optim.SGD(model.parameters(), lr=lr)
     num_student = train_data.shape[0]
-    train_losses = []
+    train_accs = []
     valid_accs = []
     for epoch in range(0, num_epoch):
         train_loss = 0.
@@ -129,16 +129,17 @@ def train(model, lr, lamb, train_data, zero_train_data, valid_data, num_epoch):
             optimizer.step()
 
         valid_acc = evaluate(model, zero_train_data, valid_data)
+        train_acc = evaluate(model, zero_train_data, train_data_dict)
         print("Epoch: {} \tTraining Cost: {:.6f}\t "
               "Valid Acc: {}".format(epoch, train_loss, valid_acc))
-        train_losses.append(train_loss)
+        train_accs.append(train_acc)
         valid_accs.append(valid_acc)
     x = list(range(num_epoch))
     fig, ax = plt.subplots(1, 2, figsize=(12, 5))
-    ax[0].plot(x, train_losses)
-    ax[0].set_title("Training Loss")
+    ax[0].plot(x, train_accs)
+    ax[0].set_title("Training accuracies")
     ax[1].plot(x, valid_accs)
-    ax[1].set_title("Validation")
+    ax[1].set_title("Validation accuracies")
     plt.tight_layout()
     plt.show()
     #####################################################################
@@ -171,7 +172,7 @@ def evaluate(model, train_data, valid_data):
         total += 1
     return correct / float(total)
 
-
+train_data_dict = load_train_csv('/home/alwyn/Developer/ut/CSC311H1/csc311-project/data')
 def main():
     zero_train_matrix, train_matrix, valid_data, test_data = load_data()
 
