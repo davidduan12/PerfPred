@@ -8,6 +8,7 @@ import torch.utils.data
 
 import numpy as np
 import torch
+import matplotlib.pyplot as plt
 
 
 def load_data(base_path="../data"):
@@ -70,11 +71,13 @@ class AutoEncoder(nn.Module):
         # Implement the function as described in the docstring.             #
         # Use sigmoid activations for f and g.                              #
         #####################################################################
+        # print(inputs.shape)
         out = inputs.clone()
         out = self.g(out)
-        out = F.relu(out)
+        out = F.sigmoid(out)
         out = self.h(out)
-        out = F.relu(out)
+        out = F.sigmoid(out)
+        # print(out.shape)
         #####################################################################
         #                       END OF YOUR CODE                            #
         #####################################################################
@@ -94,15 +97,16 @@ def train(model, lr, lamb, train_data, zero_train_data, valid_data, num_epoch):
     :param num_epoch: int
     :return: None
     """
-    # TODO: Add a regularizer to the cost function. 
-    
+    # TODO: Add a regularizer to the cost function.
+
     # Tell PyTorch you are training the model.
     model.train()
 
     # Define optimizers and loss function.
     optimizer = optim.SGD(model.parameters(), lr=lr)
     num_student = train_data.shape[0]
-
+    train_accs = []
+    valid_accs = []
     for epoch in range(0, num_epoch):
         train_loss = 0.
 
@@ -114,20 +118,30 @@ def train(model, lr, lamb, train_data, zero_train_data, valid_data, num_epoch):
             output = model(inputs)
 
             # Mask the target to only compute the gradient of valid entries.
-            # nan_mask = np.isnan(train_data[user_id].unsqueeze(0).numpy())
-            nan_mask = np.isnan(train_data[user_id].numpy())
+            nan_mask = np.isnan(train_data[user_id].unsqueeze(0).numpy())
             target[0][nan_mask] = output[0][nan_mask]
 
             loss = torch.sum((output - target) ** 2.)
-            # loss = loss + lamb * model.get_weight_norm()**2.
+            loss = loss + lamb / 2 * model.get_weight_norm()
             loss.backward()
 
             train_loss += loss.item()
             optimizer.step()
 
         valid_acc = evaluate(model, zero_train_data, valid_data)
+        train_acc = evaluate(model, zero_train_data, train_data_dict)
         print("Epoch: {} \tTraining Cost: {:.6f}\t "
               "Valid Acc: {}".format(epoch, train_loss, valid_acc))
+        train_accs.append(train_acc)
+        valid_accs.append(valid_acc)
+    x = list(range(num_epoch))
+    fig, ax = plt.subplots(1, 2, figsize=(12, 5))
+    ax[0].plot(x, train_accs)
+    ax[0].set_title("Training accuracies")
+    ax[1].plot(x, valid_accs)
+    ax[1].set_title("Validation accuracies")
+    plt.tight_layout()
+    plt.show()
     #####################################################################
     #                       END OF YOUR CODE                            #
     #####################################################################
@@ -158,7 +172,7 @@ def evaluate(model, train_data, valid_data):
         total += 1
     return correct / float(total)
 
-
+train_data_dict = load_train_csv('/home/alwyn/Developer/ut/CSC311H1/csc311-project/data')
 def main():
     zero_train_matrix, train_matrix, valid_data, test_data = load_data()
 
@@ -167,17 +181,27 @@ def main():
     # Try out 5 different k and select the best k using the             #
     # validation set.                                                   #
     #####################################################################
-    # Set model hyperparameters.
-    k = 50  # 10 50 100 200 500
+    k = 10
+    lr = 0.01
+    num_epoch = 120
+    lamb = 0
+    model = AutoEncoder(num_question=zero_train_matrix.shape[1], k=k)
+    print(f"\nbest parameter without regularization: k={k}, lr={lr}, num_epoch={num_epoch}")
+    train(model, lr, lamb, train_matrix, zero_train_matrix,
+          valid_data, num_epoch)
+    print("test accuracy: ", evaluate(model, zero_train_matrix, test_data))
+
+    k = 10  # 10 50 100 200 500
     model = AutoEncoder(num_question=zero_train_matrix.shape[1], k=k)
 
     # Set optimization hyperparameters.
-    lr = 0.0005
-    num_epoch = 1000
-    lamb = 114514
-
+    lr = 0.01
+    num_epoch = 120
+    lamb = 0.001
+    print(f"\nbest parameter with regularization: k={k}, lr={lr}, num_epoch={num_epoch}, lamb={lamb}")
     train(model, lr, lamb, train_matrix, zero_train_matrix,
           valid_data, num_epoch)
+    print("test accuracy: ", evaluate(model, zero_train_matrix, test_data))
     #####################################################################
     #                       END OF YOUR CODE                            #
     #####################################################################
